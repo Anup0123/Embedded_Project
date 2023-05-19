@@ -1,0 +1,65 @@
+
+#include<ESP8266WiFi.h>//inculde the library of esp8266
+#include<WiFiClient.h>//include library of wifi module
+#include<ESP8266HTTPClient.h>
+#include <ArduinoJson.h>//include library of Arduino json
+String URL="Link from thingspeak private channel";//get http request url from private thingspeak channel
+const int trig =D1; //initializing trig pin of sensor
+const int echo =D2; //initializing echo pin of sensor
+const int LED=D3;   //initializing LED pin 
+const int Buzzer=D4; //initializing Buzzer pin
+long duration=0;
+int distance=0;
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //serial monitor begin
+  WiFi.disconnect(); //wifi is disconnect 
+  delay(2000);
+  Serial.print("Start connection");
+  WiFi.begin("Username","password"); //wifi connection is made by passing username and password
+  while((!(WiFi.status()== WL_CONNECTED))){ //checking if wifi is connected or not
+      delay(200);
+      Serial.print("..");
+    }
+  Serial.println("Connected");
+  pinMode(trig,OUTPUT);//gets output from trig pin
+  pinMode(echo,INPUT); //gets input from echo pin
+  pinMode(LED,OUTPUT);
+  pinMode(Buzzer,OUTPUT);
+}
+void loop() {
+  // put your main code here, to run repeatedly:
+  WiFiClient client;
+  HTTPClient http;
+  digitalWrite(trig,LOW); 
+  delayMicroseconds(2);
+  digitalWrite(trig,HIGH); //trig pin activates
+  delayMicroseconds(10); //waiting for 10 microsecond and sends data
+  digitalWrite(trig,LOW);
+  duration= pulseIn(echo,HIGH); //store data from echo pin when its pulse is high
+  distance=duration*0.034 /2; //calculate distance from duration obtained from echo pin
+  Serial.println(distance);
+  delay(200);
+  if(distance < 25)  // checking if obstacle is at distance of 25 cm 
+{
+  
+  digitalWrite(LED, HIGH);  // if distance is 25 cm , Buzzer will turn ON
+  digitalWrite(Buzzer, HIGH);  // LED ON 
+  
+}
+
+else
+{
+    digitalWrite(LED,LOW);  // KED OFF
+    digitalWrite(Buzzer,LOW);  // Buzzer OFF 
+}
+
+  String newURL=URL+String(distance);// creating new string after concating with URL
+  http.begin(client,newURL);//http begin to request to send data in thingspeak 
+  int responsecode=http.GET();//get response from http
+  String data=http.getString();//send data through http protocol
+ Serial.println(data);//display data in serial monitor
+  http.end();
+ delay(5000);//send data to website at the interval of 5 second.
+  
+}
